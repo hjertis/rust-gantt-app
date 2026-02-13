@@ -1,0 +1,9 @@
+name,start,end,status
+Design Phase,2026-02-01,2026-02-14,In Progress
+Backend API,2026-02-10,2026-03-01,Firm Planned
+Frontend UI,2026-02-15,2026-03-10,Firm Planned
+Database Setup,2026-02-05,2026-02-12,Finished
+Testing,2026-03-01,2026-03-15,Not Started
+Deployment,2026-03-15,2026-03-20,Firm Planned
+Documentation,2026-02-20,2026-03-05,Released
+Code Review,2026-03-05,2026-03-12,Firm Planned
