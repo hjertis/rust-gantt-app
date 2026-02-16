@@ -110,7 +110,7 @@ pub fn import_csv(path: &PathBuf) -> Result<(Vec<Task>, usize), String> {
         ));
     }
 
-    let colors = theme::TASK_COLORS;
+    let colors = theme::task_palette();
     let mut tasks = Vec::new();
     let mut skipped = 0usize;
 

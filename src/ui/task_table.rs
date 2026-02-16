@@ -26,13 +26,13 @@ pub fn show_task_table(
             RichText::new("Tasks")
                 .strong()
                 .size(15.0)
-                .color(theme::TEXT_PRIMARY),
+                .color(theme::text_primary()),
         );
         ui.add_space(4.0);
         ui.label(
             RichText::new(format!("({})", tasks.len()))
                 .size(11.0)
-                .color(theme::TEXT_DIM),
+                .color(theme::text_dim()),
         );
     });
     ui.add_space(4.0);
@@ -41,7 +41,7 @@ pub fn show_task_table(
     let btn = egui::Button::new(
         RichText::new("＋  Add Task").color(Color32::WHITE).size(12.0),
     )
-    .fill(theme::ACCENT)
+    .fill(theme::accent())
     .rounding(egui::Rounding::same(5.0));
     if ui.add_sized([ui.available_width(), 30.0], btn).clicked() {
         action = TaskTableAction::Add;
@@ -62,7 +62,7 @@ pub fn show_task_table(
                 ui.spacing_mut().item_spacing.x = 4.0;
                 let hdr = |ui: &mut Ui, text: &str, width: f32| {
                     ui.allocate_ui(egui::vec2(width, 16.0), |ui| {
-                        ui.label(RichText::new(text).size(9.0).color(theme::TEXT_DIM).strong());
+                        ui.label(RichText::new(text).size(9.0).color(theme::text_dim()).strong());
                     });
                 };
                 hdr(ui, "", 14.0);            // color dot
@@ -85,11 +85,11 @@ pub fn show_task_table(
 
                 // Row frame — use solid dark colors so no light fill bleeds through
                 let row_bg = if is_selected {
-                    theme::BG_SELECTED
+                    theme::bg_selected()
                 } else if i % 2 == 0 {
-                    theme::BG_PANEL       // solid slightly lighter dark
+                    theme::bg_panel()       // solid slightly lighter dark
                 } else {
-                    theme::BG_DARK        // solid base dark
+                    theme::bg_dark()        // solid base dark
                 };
 
                 let frame = egui::Frame {
@@ -97,11 +97,16 @@ pub fn show_task_table(
                     rounding: egui::Rounding::same(4.0),
                     inner_margin: egui::Margin::symmetric(6.0, 4.0),
                     outer_margin: egui::Margin::ZERO,
-                    stroke: egui::Stroke::NONE,
+                    stroke: if is_selected {
+                        egui::Stroke::new(1.0, theme::row_selected_stroke())
+                    } else {
+                        egui::Stroke::new(1.0, theme::row_unselected_stroke())
+                    },
                     shadow: egui::epaint::Shadow::NONE,
                 };
 
                 let frame_resp = frame.show(ui, |ui| {
+                    ui.set_min_height(theme::row_height() - 8.0); // 8.0 accounts for inner margin
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
 
@@ -120,7 +125,7 @@ pub fn show_task_table(
                         let name_text = RichText::new(name).size(12.0).color(if is_selected {
                             Color32::WHITE
                         } else {
-                            theme::TEXT_PRIMARY
+                            theme::text_primary()
                         });
                         ui.add(
                             egui::Label::new(name_text)
@@ -137,7 +142,7 @@ pub fn show_task_table(
                                     egui::Button::new(
                                         RichText::new("✕")
                                             .size(10.0)
-                                            .color(theme::TEXT_DIM),
+                                            .color(theme::text_dim()),
                                     )
                                     .frame(false),
                                 );
@@ -156,17 +161,17 @@ pub fn show_task_table(
                                 ui.label(
                                     RichText::new(task.end.format("%m/%d").to_string())
                                         .size(10.0)
-                                        .color(theme::TEXT_SECONDARY),
+                                        .color(theme::text_secondary()),
                                 );
                                 ui.label(
                                     RichText::new("→")
                                         .size(9.0)
-                                        .color(theme::TEXT_DIM),
+                                        .color(theme::text_dim()),
                                 );
                                 ui.label(
                                     RichText::new(task.start.format("%m/%d").to_string())
                                         .size(10.0)
-                                        .color(theme::TEXT_SECONDARY),
+                                        .color(theme::text_secondary()),
                                 );
                             },
                         );
@@ -180,12 +185,12 @@ pub fn show_task_table(
                     egui::Id::new(("task-row", task.id)),
                     egui::Sense::click(),
                 );
-                if row_click.clicked() {
+                if row_click.clicked() && matches!(action, TaskTableAction::None) {
                     action = TaskTableAction::Select(task.id);
                 }
 
                 // Small gap between rows
-                ui.add_space(1.0);
+                ui.add_space(theme::row_gap());
             }
         });
 
@@ -193,4 +198,5 @@ pub fn show_task_table(
 }
 
 /// Color palette for auto-assigning task colors (re-exported from theme).
-pub const TASK_COLORS: &[Color32] = theme::TASK_COLORS;
+#[allow(dead_code)]
+pub fn task_colors() -> Vec<Color32> { theme::task_palette() }

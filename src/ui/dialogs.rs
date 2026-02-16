@@ -2,19 +2,18 @@ use crate::app::GanttApp;
 use crate::ui::theme;
 use egui::{Color32, Context, RichText, Window};
 
-const FIELD_BG: Color32 = Color32::from_rgb(20, 20, 28);
-
 /// Render the "Add Task" dialog.
 pub fn show_add_task_dialog(app: &mut GanttApp, ctx: &Context) {
     let mut should_close = false;
+    let layout = theme::layout();
     let resp = Window::new(RichText::new("Add Task").strong().size(14.0))
         .resizable(false)
         .collapsible(false)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-        .fixed_size([320.0, 0.0])
+        .fixed_size([layout.dialog_width, 0.0])
         .show(ctx, |ui| {
             // Force dark backgrounds inside this dialog
-            ui.visuals_mut().extreme_bg_color = FIELD_BG;
+            ui.visuals_mut().extreme_bg_color = theme::bg_field();
             ui.visuals_mut().faint_bg_color = Color32::TRANSPARENT;
             ui.visuals_mut().striped = false;
 
@@ -25,30 +24,30 @@ pub fn show_add_task_dialog(app: &mut GanttApp, ctx: &Context) {
                 .striped(false)
                 .spacing([12.0, 8.0])
                 .show(ui, |ui| {
-                    ui.label(RichText::new("Name").color(theme::TEXT_SECONDARY));
+                    ui.label(RichText::new("Name").color(theme::text_secondary()));
                     ui.add_sized(
                         [220.0, 24.0],
                         egui::TextEdit::singleline(&mut app.new_task_name)
                             .hint_text("Task name...")
-                            .text_color(theme::TEXT_PRIMARY),
+                            .text_color(theme::text_primary()),
                     );
                     ui.end_row();
 
-                    ui.label(RichText::new("Start").color(theme::TEXT_SECONDARY));
+                    ui.label(RichText::new("Start").color(theme::text_secondary()));
                     ui.add_sized(
                         [220.0, 24.0],
                         egui::TextEdit::singleline(&mut app.new_task_start)
                             .hint_text("YYYY-MM-DD")
-                            .text_color(theme::TEXT_PRIMARY),
+                            .text_color(theme::text_primary()),
                     );
                     ui.end_row();
 
-                    ui.label(RichText::new("End").color(theme::TEXT_SECONDARY));
+                    ui.label(RichText::new("End").color(theme::text_secondary()));
                     ui.add_sized(
                         [220.0, 24.0],
                         egui::TextEdit::singleline(&mut app.new_task_end)
                             .hint_text("YYYY-MM-DD")
-                            .text_color(theme::TEXT_PRIMARY),
+                            .text_color(theme::text_primary()),
                     );
                     ui.end_row();
 
@@ -65,7 +64,7 @@ pub fn show_add_task_dialog(app: &mut GanttApp, ctx: &Context) {
                 let create_btn = egui::Button::new(
                     RichText::new("Create").color(Color32::WHITE),
                 )
-                .fill(theme::ACCENT)
+                .fill(theme::accent())
                 .rounding(egui::Rounding::same(4.0));
                 if ui.add_sized([80.0, 28.0], create_btn).clicked() {
                     app.create_task_from_dialog();
@@ -97,17 +96,18 @@ pub fn show_add_task_dialog(app: &mut GanttApp, ctx: &Context) {
 /// Render the "About" dialog.
 pub fn show_about_dialog(app: &mut GanttApp, ctx: &Context) {
     let mut should_close = false;
+    let layout = theme::layout();
     Window::new("About")
         .resizable(false)
         .collapsible(false)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-        .fixed_size([300.0, 160.0])
+        .fixed_size([layout.about_dialog_width, layout.about_dialog_height])
         .show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(12.0);
                 ui.heading(RichText::new("Rust Gantt App").strong());
                 ui.add_space(2.0);
-                ui.label(RichText::new("Version 0.1.0").color(theme::TEXT_SECONDARY));
+                ui.label(RichText::new("Version 0.1.0").color(theme::text_secondary()));
                 ui.add_space(10.0);
                 ui.label("A Gantt chart application");
                 ui.label("built with Rust and egui.");

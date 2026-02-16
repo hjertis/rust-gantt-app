@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::model::{Project, Task, TimelineViewport};
 use crate::ui;
+use crate::ui::theme_manager::ThemeManager;
 
 /// Main application state.
 pub struct GanttApp {
@@ -22,6 +23,9 @@ pub struct GanttApp {
 
     // Status message
     pub status_message: String,
+
+    // Theme engine
+    pub theme_manager: ThemeManager,
 }
 
 impl GanttApp {
@@ -60,6 +64,7 @@ impl GanttApp {
             new_task_end: default_end.clone(),
             new_task_is_milestone: false,
             status_message: "Ready".to_string(),
+            theme_manager: ThemeManager::new(),
         }
     }
 
@@ -110,7 +115,37 @@ impl GanttApp {
 
         let m1 = Task::new_milestone("Launch", today + chrono::Duration::days(32));
 
+        // Sample dependencies
+        let deps = vec![
+            crate::model::task::Dependency {
+                from_task: t1.id,
+                to_task: t2.id,
+                kind: crate::model::task::DependencyKind::FinishToStart,
+            },
+            crate::model::task::Dependency {
+                from_task: t2.id,
+                to_task: t3.id,
+                kind: crate::model::task::DependencyKind::FinishToStart,
+            },
+            crate::model::task::Dependency {
+                from_task: t3.id,
+                to_task: t4.id,
+                kind: crate::model::task::DependencyKind::FinishToStart,
+            },
+            crate::model::task::Dependency {
+                from_task: t4.id,
+                to_task: t5.id,
+                kind: crate::model::task::DependencyKind::FinishToStart,
+            },
+            crate::model::task::Dependency {
+                from_task: t5.id,
+                to_task: m1.id,
+                kind: crate::model::task::DependencyKind::FinishToStart,
+            },
+        ];
+
         project.tasks = vec![t1, t2, t3, t4, t5, m1];
+        project.dependencies = deps;
         project
     }
 
@@ -258,9 +293,10 @@ impl GanttApp {
         let task = if self.new_task_is_milestone {
             Task::new_milestone(name, start)
         } else {
-            let color_idx = self.project.tasks.len() % ui::task_table::TASK_COLORS.len();
+            let palette = ui::theme::task_palette();
+            let color_idx = self.project.tasks.len() % palette.len().max(1);
             let mut t = Task::new(name, start, end);
-            t.color = ui::task_table::TASK_COLORS[color_idx];
+            t.color = ui::theme::task_color(color_idx);
             t
         };
 
@@ -303,6 +339,7 @@ impl GanttApp {
 
 impl eframe::App for GanttApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ui::theme::set_active(self.theme_manager.active());
         ui::theme::apply_theme(ctx);
 
         // Keyboard shortcuts
@@ -324,37 +361,38 @@ impl eframe::App for GanttApp {
 
         // Bottom panel: status bar
         egui::TopBottomPanel::bottom("status_bar")
-            .exact_height(24.0)
+            .exact_height(ui::theme::status_bar_height())
             .frame(
                 egui::Frame::default()
-                    .fill(egui::Color32::from_rgb(26, 26, 36))
+                    .fill(ui::theme::status_bar_bg())
                     .inner_margin(egui::Margin::symmetric(10.0, 0.0)),
             )
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
                         egui::RichText::new(&self.status_message)
-                            .size(11.0)
-                            .color(ui::theme::TEXT_SECONDARY),
+                            .font(ui::theme::font_status())
+                            .color(ui::theme::text_secondary()),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.label(
                             egui::RichText::new(format!("Tasks: {}", self.project.tasks.len()))
                                 .size(10.5)
-                                .color(ui::theme::TEXT_DIM),
+                                .color(ui::theme::text_dim()),
                         );
                         ui.label(
                             egui::RichText::new(" · ")
                                 .size(10.5)
-                                .color(ui::theme::TEXT_DIM),
+                                .color(ui::theme::text_dim()),
                         );
+                        let default_ppd = ui::theme::zoom().default_pixels_per_day;
                         ui.label(
                             egui::RichText::new(format!(
                                 "Zoom: {:.0}%",
-                                self.viewport.pixels_per_day / 18.0 * 100.0
+                                self.viewport.pixels_per_day / default_ppd * 100.0
                             ))
                             .size(10.5)
-                            .color(ui::theme::TEXT_DIM),
+                            .color(ui::theme::text_dim()),
                         );
                     });
                 });
@@ -363,23 +401,37 @@ impl eframe::App for GanttApp {
         // Left panel: task table + editor
         let mut task_action = ui::task_table::TaskTableAction::None;
         let mut editor_changed = false;
+        let mut dep_remove: Option<(Uuid, Uuid)> = None;
         egui::SidePanel::left("task_panel")
-            .default_width(340.0)
-            .min_width(240.0)
+            .default_width(ui::theme::side_panel_default_width())
+            .min_width(ui::theme::side_panel_min_width())
             .resizable(true)
             .frame(
                 egui::Frame::default()
-                    .fill(ui::theme::BG_PANEL)
-                    .inner_margin(egui::Margin::same(10.0))
-                    .stroke(egui::Stroke::new(1.0, ui::theme::BORDER_SUBTLE)),
+                    .fill(ui::theme::bg_panel())
+                    .inner_margin(egui::Margin::same(ui::theme::layout().panel_inner_margin))
+                    .stroke(egui::Stroke::new(1.0, ui::theme::border_subtle())),
             )
             .show(ctx, |ui| {
                 // If a task is selected, show editor at the top
                 if let Some(sel_id) = self.selected_task {
+                    let deps_snapshot: Vec<_> = self.project.dependencies.clone();
+                    let tasks_snapshot: Vec<_> = self.project.tasks.clone();
                     if let Some(task) = self.project.tasks.iter_mut().find(|t| t.id == sel_id) {
-                        let result = ui::task_editor::show_task_editor(task, ui);
-                        if matches!(result, ui::task_editor::EditorAction::Changed) {
-                            editor_changed = true;
+                        let result = ui::task_editor::show_task_editor(
+                            task,
+                            &tasks_snapshot,
+                            &deps_snapshot,
+                            ui,
+                        );
+                        match result {
+                            ui::task_editor::EditorAction::Changed => {
+                                editor_changed = true;
+                            }
+                            ui::task_editor::EditorAction::RemoveDependency(from, to) => {
+                                dep_remove = Some((from, to));
+                            }
+                            ui::task_editor::EditorAction::None => {}
                         }
                     }
                     ui.add_space(4.0);
@@ -413,14 +465,23 @@ impl eframe::App for GanttApp {
             self.project.touch();
             self.status_message = "Task updated".to_string();
         }
+        // Handle dependency removal from editor
+        if let Some((from, to)) = dep_remove {
+            self.project.dependencies.retain(|d| {
+                !(d.from_task == from && d.to_task == to)
+            });
+            self.project.touch();
+            self.status_message = "Dependency removed".to_string();
+        }
 
         // Central panel: Gantt chart
         let chart_frame = egui::Frame::default()
-            .fill(ui::theme::BG_DARK)
+            .fill(ui::theme::bg_dark())
             .inner_margin(egui::Margin::ZERO);
         egui::CentralPanel::default().frame(chart_frame).show(ctx, |ui| {
             let chart_interaction = ui::gantt_chart::show_gantt_chart(
                 &mut self.project.tasks,
+                &self.project.dependencies,
                 &mut self.viewport,
                 &mut self.selected_task,
                 ui,
@@ -441,6 +502,32 @@ impl eframe::App for GanttApp {
                 } else {
                     self.status_message = "Timeline updated".to_string();
                 }
+            }
+            if let Some(dep) = chart_interaction.new_dependency {
+                // Avoid duplicates
+                let exists = self.project.dependencies.iter().any(|d| {
+                    d.from_task == dep.from_task && d.to_task == dep.to_task
+                });
+                if !exists {
+                    let from_name = self.project.tasks.iter()
+                        .find(|t| t.id == dep.from_task)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_default();
+                    let to_name = self.project.tasks.iter()
+                        .find(|t| t.id == dep.to_task)
+                        .map(|t| t.name.clone())
+                        .unwrap_or_default();
+                    self.project.dependencies.push(dep);
+                    self.project.touch();
+                    self.status_message = format!("Linked '{}' → '{}'", from_name, to_name);
+                }
+            }
+            if let Some((from, to)) = chart_interaction.remove_dependency {
+                self.project.dependencies.retain(|d| {
+                    !(d.from_task == from && d.to_task == to)
+                });
+                self.project.touch();
+                self.status_message = "Dependency removed".to_string();
             }
         });
 

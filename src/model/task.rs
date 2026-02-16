@@ -67,10 +67,6 @@ impl Task {
         }
     }
 
-    /// Duration in days.
-    pub fn duration_days(&self) -> i64 {
-        (self.end - self.start).num_days().max(0)
-    }
 }
 
 /// Serde helper for `Color32`.

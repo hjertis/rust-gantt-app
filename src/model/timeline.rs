@@ -37,12 +37,6 @@ impl TimelineViewport {
         days * self.pixels_per_day
     }
 
-    /// Convert an x-pixel offset back to a date.
-    pub fn x_to_date(&self, x: f32) -> NaiveDate {
-        let days = (x / self.pixels_per_day).round() as i64;
-        self.start + chrono::Duration::days(days)
-    }
-
     /// Total width in pixels for the visible range.
     pub fn total_width(&self) -> f32 {
         self.date_to_x(self.end)
@@ -58,9 +52,4 @@ impl TimelineViewport {
         self.pixels_per_day = (self.pixels_per_day / 1.2).max(2.0);
     }
 
-    /// Scroll the viewport by a number of days.
-    pub fn scroll_days(&mut self, days: i64) {
-        self.start += chrono::Duration::days(days);
-        self.end += chrono::Duration::days(days);
-    }
 }

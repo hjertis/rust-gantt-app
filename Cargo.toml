@@ -16,6 +16,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 rfd = "0.15"
 csv = "1"
 directories = "5"
+open = "5"
 
 [profile.release]
 opt-level = 2
