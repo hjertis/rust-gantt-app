@@ -2,8 +2,13 @@
 name = "rust-gantt-app"
 version = "0.1.0"
 edition = "2021"
-description = "A Gantt chart desktop application built with Rust and egui"
-authors = []
+description = "A native Gantt chart desktop application built with Rust and egui"
+authors = ["mhj"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/hjertis/rust-gantt-app"
+keywords = ["gantt", "project-management", "egui", "desktop"]
+categories = ["gui"]
 
 [dependencies]
 eframe = "0.29"
