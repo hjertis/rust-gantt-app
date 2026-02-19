@@ -236,7 +236,7 @@ pub fn show_gantt_chart(
                 // Safety: split borrow so we can read siblings while mutating task.
                 let task_id = tasks[task_i].id;
                 let task_parent_id = tasks[task_i].parent_id;
-                let is_parent_task = tasks.iter().any(|t| t.parent_id == Some(task_id));
+                let is_parent_task = tasks[task_i].has_children(tasks);
 
                 let y = *animated_row_y.get(&task_id).unwrap_or(
                     &(origin.y + hh + vis_i as f32 * (row_height + row_padding) + row_padding),

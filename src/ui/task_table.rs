@@ -139,7 +139,7 @@ pub fn show_task_table(
                 }
 
                 let is_selected = selected_task == Some(task.id);
-                let is_parent = tasks.iter().any(|t| t.parent_id == Some(task.id));
+                let is_parent = task.has_children(tasks);
                 let is_child = task.parent_id.is_some();
                 let is_overdue =
                     !task.is_milestone && task.end < today && task.progress < 1.0;

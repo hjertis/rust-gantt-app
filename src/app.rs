@@ -420,10 +420,19 @@ impl GanttApp {
     pub fn delete_task(&mut self, id: Uuid) {
         self.undo_history.push(&self.project.tasks, &self.project.dependencies);
         // Also delete all children of this task
-        let children_ids: Vec<Uuid> = self.project.tasks.iter()
-            .filter(|t| t.parent_id == Some(id))
-            .map(|t| t.id)
-            .collect();
+        let children_ids: Vec<Uuid> = self
+            .project
+            .tasks
+            .iter()
+            .find(|t| t.id == id)
+            .map(|parent| {
+                parent
+                    .children_ids(&self.project.tasks)
+                    .into_iter()
+                    .map(|child| child.id)
+                    .collect()
+            })
+            .unwrap_or_default();
         self.project.tasks.retain(|t| t.id != id && t.parent_id != Some(id));
         self.project.dependencies.retain(|d| {
             d.from_task != id && d.to_task != id

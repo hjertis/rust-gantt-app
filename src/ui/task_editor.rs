@@ -159,7 +159,7 @@ pub fn show_task_editor(
 
         // ── Dates ───────────────────────────────────────────────────
         // For parent tasks, dates are auto-calculated from children (read-only).
-        let is_parent_task = all_tasks.iter().any(|t| t.parent_id == Some(task_id));
+        let is_parent_task = task.has_children(all_tasks);
         if is_parent_task {
             ui.label(RichText::new("Dates").size(10.0).color(theme::text_dim()).strong());
             ui.horizontal(|ui| {
@@ -418,7 +418,7 @@ pub fn show_task_editor(
                 if t.id == task_id { return false; }
                 if already_linked.contains(&t.id) { return false; }
                 // Don't link to/from summary (parent) tasks
-                let t_is_parent = all_tasks.iter().any(|c| c.parent_id == Some(t.id));
+                let t_is_parent = t.has_children(all_tasks);
                 if t_is_parent { return false; }
                 // If this task is a child, restrict to siblings (same parent)
                 if let Some(my_parent) = task.parent_id {
