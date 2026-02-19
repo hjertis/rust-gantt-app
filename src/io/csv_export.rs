@@ -27,7 +27,7 @@ pub fn export_csv(tasks: &[Task], path: &Path) -> Result<usize, String> {
         .map_err(|e| format!("Failed to create CSV file: {}", e))?;
 
     // Write header
-    wtr.write_record(["Task Label", "Start Date", "End Date", "Status", "Priority", "Description", "Parent"])
+    wtr.write_record(["Task Label", "Start Date", "End Date", "Status", "Priority", "Description", "Parent", "Milestone"])
         .map_err(|e| format!("Failed to write header: {}", e))?;
 
     // Write each task
@@ -36,6 +36,7 @@ pub fn export_csv(tasks: &[Task], path: &Path) -> Result<usize, String> {
             .and_then(|pid| tasks.iter().find(|t| t.id == pid))
             .map(|t| t.name.as_str())
             .unwrap_or("");
+        let milestone = if task.is_milestone { "true" } else { "false" };
         wtr.write_record([
             &task.name,
             &task.start.format("%d/%m/%Y").to_string(),
@@ -44,6 +45,7 @@ pub fn export_csv(tasks: &[Task], path: &Path) -> Result<usize, String> {
             task.priority.label(),
             &task.description,
             parent_name,
+            milestone,
         ])
         .map_err(|e| format!("Failed to write task '{}': {}", task.name, e))?;
     }

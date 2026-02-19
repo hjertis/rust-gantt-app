@@ -76,13 +76,13 @@ cargo run
 
 ## Keyboard Shortcuts
 
-| Shortcut    | Action                          |
-| ----------- | ------------------------------- |
-| Ctrl+S      | Save project                    |
-| Ctrl+Scroll | Zoom in/out                     |
-| Shift+Drag  | Create dependency between tasks |
+| Shortcut    | Action                            |
+| ----------- | --------------------------------- |
+| Ctrl+S      | Save project                      |
+| Ctrl+Scroll | Zoom in/out                       |
+| Shift+Drag  | Create dependency between tasks   |
 | Right-click | Open task/dependency context menu |
-| Escape      | Close dialogs                   |
+| Escape      | Close dialogs                     |
 
 ## Custom Themes
 

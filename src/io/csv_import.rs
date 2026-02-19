@@ -52,6 +52,7 @@ fn normalize_header(h: &str) -> String {
 
 /// Map a normalized header to our column index:
 ///   0 = name, 1 = start, 2 = end, 3 = status, 4 = priority, 5 = description
+///   6 = parent, 7 = milestone
 fn header_to_col(normalized: &str) -> Option<usize> {
     match normalized {
         "name" | "task" | "tasklabel" | "taskname" | "label" | "title"
@@ -66,6 +67,10 @@ fn header_to_col(normalized: &str) -> Option<usize> {
         "priority" | "pri" | "importance" => Some(4),
 
         "description" | "notes" | "note" | "details" | "comment" | "comments" => Some(5),
+
+        "parent" | "parenttask" | "parentname" | "parent_task" | "subtaskof" => Some(6),
+
+        "milestone" | "ismilestone" | "type" => Some(7),
 
         _ => None,
     }
@@ -116,7 +121,9 @@ pub fn import_csv(path: &PathBuf) -> Result<(Vec<Task>, usize), String> {
     }
 
     let colors = theme::task_palette();
-    let mut tasks = Vec::new();
+    // Accumulate (task, optional parent name) pairs; resolve parent IDs in a second pass.
+    let mut tasks: Vec<Task> = Vec::new();
+    let mut parent_names: Vec<Option<String>> = Vec::new();
     let mut skipped = 0usize;
 
     for (i, result) in reader.records().enumerate() {
@@ -136,6 +143,8 @@ pub fn import_csv(path: &PathBuf) -> Result<(Vec<Task>, usize), String> {
         let mut status_val = None;
         let mut priority_val = None;
         let mut description_val = None;
+        let mut parent_val: Option<String> = None;
+        let mut milestone_val: Option<String> = None;
 
         for (col_idx, field) in record.iter().enumerate() {
             if col_idx < col_map.len() {
@@ -146,6 +155,8 @@ pub fn import_csv(path: &PathBuf) -> Result<(Vec<Task>, usize), String> {
                     Some(3) => status_val = Some(field.trim().to_string()),
                     Some(4) => priority_val = Some(field.trim().to_string()),
                     Some(5) => description_val = Some(field.trim().to_string()),
+                    Some(6) => parent_val = Some(field.trim().to_string()),
+                    Some(7) => milestone_val = Some(field.trim().to_string()),
                     _ => {}
                 }
             }
@@ -192,11 +203,25 @@ pub fn import_csv(path: &PathBuf) -> Result<(Vec<Task>, usize), String> {
 
         let description = description_val.unwrap_or_default();
 
+        // Determine milestone: explicit column wins, otherwise infer from start == end.
+        let is_milestone = milestone_val
+            .as_deref()
+            .map(|s| matches!(s.trim().to_lowercase().as_str(),
+                "true" | "yes" | "1" | "milestone"))
+            .unwrap_or(false)
+            || start == end.max(start) && start == end;
+
         let mut task = Task::new(name, start, end.max(start));
         task.progress = progress;
         task.priority = priority;
         task.description = description;
         task.color = colors[tasks.len() % colors.len()];
+        task.is_milestone = is_milestone;
+        if is_milestone { task.end = task.start; }
+
+        // Store the raw parent name; resolve after all tasks are loaded.
+        let parent_name = parent_val.filter(|s| !s.is_empty());
+        parent_names.push(parent_name);
         tasks.push(task);
     }
 
@@ -208,6 +233,26 @@ pub fn import_csv(path: &PathBuf) -> Result<(Vec<Task>, usize), String> {
     }
     if tasks.is_empty() {
         return Err("CSV file is empty or has no data rows".to_string());
+    }
+
+    // Second pass: resolve parent names to UUIDs.
+    // Build a name → id lookup from the freshly parsed tasks.
+    let name_to_id: std::collections::HashMap<String, uuid::Uuid> = tasks
+        .iter()
+        .map(|t| (t.name.to_lowercase(), t.id))
+        .collect();
+
+    for (task, parent_name) in tasks.iter_mut().zip(parent_names.iter()) {
+        if let Some(pname) = parent_name {
+            if let Some(&pid) = name_to_id.get(&pname.to_lowercase()) {
+                // Don't allow a task to be its own parent.
+                if pid != task.id {
+                    task.parent_id = Some(pid);
+                }
+            } else {
+                eprintln!("Warning: parent task '{}' not found for '{}'", pname, task.name);
+            }
+        }
     }
 
     Ok((tasks, skipped))

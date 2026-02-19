@@ -103,7 +103,7 @@ pub fn show_about_dialog(app: &mut GanttApp, ctx: &Context) {
                 ui.add_space(12.0);
                 ui.heading(RichText::new("Rust Gantt App").strong());
                 ui.add_space(2.0);
-                ui.label(RichText::new("Version 0.2.0").color(theme::text_secondary()));
+                ui.label(RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).color(theme::text_secondary()));
                 ui.add_space(10.0);
                 ui.label("A Gantt chart application");
                 ui.label("built with Rust and egui.");
@@ -115,5 +115,153 @@ pub fn show_about_dialog(app: &mut GanttApp, ctx: &Context) {
         });
     if should_close || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
         app.show_about = false;
+    }
+}
+
+/// Render the "CSV Import Format" help dialog.
+pub fn show_csv_help_dialog(app: &mut GanttApp, ctx: &Context) {
+    let mut should_close = false;
+
+    Window::new(RichText::new("CSV Import Format").strong().size(14.0))
+        .resizable(true)
+        .collapsible(false)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .default_size([560.0, 500.0])
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.add_space(4.0);
+
+                // ── Delimiters ───────────────────────────────────────────
+                ui.label(RichText::new("Delimiters").strong());
+                ui.label("The delimiter is auto-detected: comma (,), semicolon (;), or tab.");
+                ui.add_space(8.0);
+
+                // ── Required columns ─────────────────────────────────────
+                ui.label(RichText::new("Required Columns").strong());
+                ui.add_space(2.0);
+                egui::Grid::new("csv_required")
+                    .num_columns(2)
+                    .striped(true)
+                    .spacing([12.0, 4.0])
+                    .show(ui, |ui| {
+                        ui.label(RichText::new("Column").underline());
+                        ui.label(RichText::new("Accepted headers (case-insensitive)").underline());
+                        ui.end_row();
+
+                        ui.label(RichText::new("Task Name").strong());
+                        ui.label("Name, Task, Task Label, Task Name, Label, Title, Activity");
+                        ui.end_row();
+
+                        ui.label(RichText::new("Start Date").strong());
+                        ui.label("Start, Start Date, From, Begin, Begin Date");
+                        ui.end_row();
+
+                        ui.label(RichText::new("End Date").strong());
+                        ui.label("End, End Date, To, Finish, Finish Date, Due, Due Date");
+                        ui.end_row();
+                    });
+                ui.add_space(8.0);
+
+                // ── Optional columns ─────────────────────────────────────
+                ui.label(RichText::new("Optional Columns").strong());
+                ui.add_space(2.0);
+                egui::Grid::new("csv_optional")
+                    .num_columns(3)
+                    .striped(true)
+                    .spacing([12.0, 4.0])
+                    .show(ui, |ui| {
+                        ui.label(RichText::new("Column").underline());
+                        ui.label(RichText::new("Accepted headers").underline());
+                        ui.label(RichText::new("Accepted values").underline());
+                        ui.end_row();
+
+                        ui.label(RichText::new("Status").strong());
+                        ui.label("Status, State, Progress, Stage");
+                        ui.label("Finished / Done / In Progress / Released / Planned / Not Started");
+                        ui.end_row();
+
+                        ui.label(RichText::new("Priority").strong());
+                        ui.label("Priority, Pri, Importance");
+                        ui.label("Critical / High / Medium / Low");
+                        ui.end_row();
+
+                        ui.label(RichText::new("Description").strong());
+                        ui.label("Description, Notes, Note, Details, Comment");
+                        ui.label("Any text");
+                        ui.end_row();
+
+                        ui.label(RichText::new("Parent").strong());
+                        ui.label("Parent, Parent Task, Parent Name, Subtask Of");
+                        ui.label("Name of the parent task (must exist in this file)");
+                        ui.end_row();
+
+                        ui.label(RichText::new("Milestone").strong());
+                        ui.label("Milestone, Is Milestone, Type");
+                        ui.label("true / false / yes / no / 1 / milestone");
+                        ui.end_row();
+                    });
+                ui.add_space(8.0);
+
+                // ── Date formats ─────────────────────────────────────────
+                ui.label(RichText::new("Supported Date Formats").strong());
+                ui.add_space(2.0);
+                for fmt in &[
+                    "YYYY-MM-DD   (e.g. 2025-06-15)",
+                    "DD/MM/YYYY   (e.g. 15/06/2025)",
+                    "MM/DD/YYYY   (e.g. 06/15/2025)",
+                    "DD-MM-YYYY   (e.g. 15-06-2025)",
+                    "DD.MM.YYYY   (e.g. 15.06.2025)",
+                    "YYYY/MM/DD   (e.g. 2025/06/15)",
+                ] {
+                    ui.label(RichText::new(*fmt).monospace().size(11.0));
+                }
+                ui.add_space(8.0);
+
+                // ── Notes ────────────────────────────────────────────────
+                ui.label(RichText::new("Notes").strong());
+                ui.add_space(2.0);
+                let notes = [
+                    "• Header matching is case-insensitive and ignores spaces, hyphens and underscores.",
+                    "• Parent tasks are matched by name — the parent must appear somewhere in the same CSV.",
+                    "• A task whose start date equals its end date is automatically treated as a milestone.",
+                    "• If a parent name is not found a warning is logged and the task is imported without a parent.",
+                    "• Rows with a missing or invalid name, start, or end date are skipped.",
+                ];
+                for note in &notes {
+                    ui.label(RichText::new(*note).small());
+                }
+                ui.add_space(10.0);
+
+                // ── Example ──────────────────────────────────────────────
+                ui.label(RichText::new("Minimal Example (semicolon-delimited)").strong());
+                ui.add_space(2.0);
+                let example = "Task Label;Start Date;End Date;Status;Priority;Parent\n\
+                               Phase 1;01/01/2025;28/02/2025;In Progress;High;\n\
+                               Design;01/01/2025;31/01/2025;Finished;Medium;Phase 1\n\
+                               Build;01/02/2025;28/02/2025;Not Started;High;Phase 1\n\
+                               Launch;01/03/2025;01/03/2025;Not Started;Critical;";
+                egui::Frame::dark_canvas(ui.style()).show(ui, |ui| {
+                    ui.add(
+                        egui::TextEdit::multiline(&mut example.to_string())
+                            .font(egui::TextStyle::Monospace)
+                            .desired_width(f32::INFINITY)
+                            .interactive(false),
+                    );
+                });
+                ui.add_space(8.0);
+            });
+
+            ui.separator();
+            ui.add_space(4.0);
+            ui.horizontal(|ui| {
+                if ui.add_sized([80.0, 28.0], egui::Button::new("Close")).clicked() {
+                    should_close = true;
+                }
+            });
+            ui.add_space(2.0);
+        });
+
+    if should_close || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        app.show_csv_help = false;
     }
 }

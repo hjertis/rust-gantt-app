@@ -17,6 +17,7 @@ pub struct GanttApp {
     // Dialog state
     pub show_add_task: bool,
     pub show_about: bool,
+    pub show_csv_help: bool,
     pub new_task_name: String,
     pub new_task_start: String,
     pub new_task_end: String,
@@ -78,6 +79,7 @@ impl GanttApp {
             selected_task: None,
             show_add_task: false,
             show_about: false,
+            show_csv_help: false,
             new_task_name: String::new(),
             new_task_start: default_start.clone(),
             new_task_end: default_end.clone(),
@@ -729,6 +731,9 @@ impl eframe::App for GanttApp {
         }
         if self.show_about {
             ui::dialogs::show_about_dialog(self, ctx);
+        }
+        if self.show_csv_help {
+            ui::dialogs::show_csv_help_dialog(self, ctx);
         }
     }
 }

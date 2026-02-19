@@ -28,6 +28,10 @@ pub fn show_toolbar(app: &mut GanttApp, ui: &mut Ui) {
                 app.import_csv();
                 ui.close_menu();
             }
+            if ui.button("  CSV Format Help...").clicked() {
+                app.show_csv_help = true;
+                ui.close_menu();
+            }
             if ui.button("  Export CSV...").clicked() {
                 app.export_csv();
                 ui.close_menu();
